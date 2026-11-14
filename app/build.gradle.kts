@@ -207,8 +207,15 @@ tasks.register("cleanRust") {
 }
 
 afterEvaluate {
-    tasks.named("preBuild") {
+    // Cada variante empacota as libs do seu próprio perfil Rust:
+    //   preDebugBuild   -> .so de debug (rápido de compilar, com símbolos)
+    //   preReleaseBuild -> .so de release (LTO + strip, ~7x menor)
+    // (usar preBuild genérico aqui fazia o APK release incluir libs debug)
+    tasks.named("preDebugBuild") {
         dependsOn("buildRustDebug", "generateUniFFIBindings")
+    }
+    tasks.named("preReleaseBuild") {
+        dependsOn("buildRustRelease", "generateUniFFIBindings")
     }
 }
 
