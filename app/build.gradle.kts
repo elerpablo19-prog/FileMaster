@@ -26,9 +26,23 @@ plugins {
 val cargoTargets = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
 val rustProjectDir = file("$rootDir/rust/core")
 
+// Keystore release (o CI a gera/povê antes do build; ver .github/workflows/build.yml)
+val keystoreFile = file("keystore/filemaster.keystore")
+
 android {
     namespace = "com.filemaster"
     compileSdk = 35
+
+    signingConfigs {
+        if (keystoreFile.exists()) {
+            create("release") {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KS_STORE_PASSWORD") ?: "filemaster"
+                keyAlias = System.getenv("KS_KEY_ALIAS") ?: "filemaster"
+                keyPassword = System.getenv("KS_KEY_PASSWORD") ?: "filemaster"
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "com.filemaster"
@@ -47,6 +61,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            // Assinatura release: ativada somente quando a keystore existe
+            // (gerada pelo CI em app/keystore/). Em builds locais sem a
+            // keystore, sai app-release-unsigned.apk — nada quebra.
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

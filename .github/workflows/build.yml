@@ -60,15 +60,48 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build APK (Rust + UniFFI bindings + Kotlin/Compose)
-        run: gradle assembleDebug --stacktrace
+      # ------------------------------------------------------------------
+      # Keystore release: usa segredo FM_KEYSTORE_BASE64 se configurado;
+      # caso contrário, gera uma keystore self-signed com senha fixa.
+      # A keystore é publicada como artefato — GUARDE-A para futuras
+      # atualizações do app (mesma assinatura = update sem desinstalar).
+      # ------------------------------------------------------------------
+      - name: Prepare release keystore
+        run: |
+          mkdir -p app/keystore
+          if [ -n "${{ secrets.FM_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.FM_KEYSTORE_BASE64 }}" | base64 -d > app/keystore/filemaster.keystore
+            echo "Usando keystore dos secrets"
+          else
+            keytool -genkeypair -v \
+              -keystore app/keystore/filemaster.keystore \
+              -alias filemaster \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass filemaster -keypass filemaster \
+              -dname "CN=FileMaster, OU=Dev, O=FileMaster, C=BR"
+            echo "Keystore gerada automaticamente (self-signed)"
+          fi
+          echo "KS_STORE_PASSWORD=filemaster" >> "$GITHUB_ENV"
+          echo "KS_KEY_ALIAS=filemaster" >> "$GITHUB_ENV"
+          echo "KS_KEY_PASSWORD=filemaster" >> "$GITHUB_ENV"
 
-      - name: Upload APK (artefato)
+      - name: Build APK (Rust + UniFFI bindings + Kotlin/Compose)
+        run: gradle assembleRelease --stacktrace
+
+      - name: Upload APK release (artefato)
         uses: actions/upload-artifact@v4
         with:
-          name: FileMaster-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: FileMaster-release-apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload keystore (artefato — guarde este arquivo!)
+        uses: actions/upload-artifact@v4
+        with:
+          name: filemaster-keystore
+          path: app/keystore/filemaster.keystore
+          retention-days: 90
           if-no-files-found: error
 
   # --------------------------------------------------------------------
@@ -82,7 +115,7 @@ jobs:
       - name: Download APK
         uses: actions/download-artifact@v4
         with:
-          name: FileMaster-debug-apk
+          name: FileMaster-release-apk
 
       - name: Attach to release
         uses: softprops/action-gh-release@v2
