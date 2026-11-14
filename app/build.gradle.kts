@@ -115,10 +115,12 @@ fun buildRustTask(buildType: String) = tasks.register<Exec>("buildRust${buildTyp
     // O Cargo resolve os linkers por variáveis de ambiente — sem precisar
     // de .cargo/config.toml (mantém o projeto independente do caminho do NDK).
     environment(
-        "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" to "$ndkBin/aarch64-linux-android$ANDROID_API_LEVEL-clang",
-        "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER" to "$ndkBin/armv7a-linux-androideabi$ANDROID_API_LEVEL-clang",
-        "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER" to "$ndkBin/x86_64-linux-android$ANDROID_API_LEVEL-clang",
-        "CARGO_TARGET_DIR", file("$rootDir/rust/core/target").absolutePath,
+        mapOf(
+            "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" to "$ndkBin/aarch64-linux-android$ANDROID_API_LEVEL-clang",
+            "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER" to "$ndkBin/armv7a-linux-androideabi$ANDROID_API_LEVEL-clang",
+            "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER" to "$ndkBin/x86_64-linux-android$ANDROID_API_LEVEL-clang",
+            "CARGO_TARGET_DIR" to file("$rootDir/rust/core/target").absolutePath,
+        )
     )
     val profileArgs = if (buildType == "release") "--release" else ""
     commandLine(
