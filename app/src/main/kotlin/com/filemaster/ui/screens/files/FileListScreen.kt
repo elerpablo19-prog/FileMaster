@@ -1,5 +1,6 @@
 package com.filemaster.ui.screens.files
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -22,7 +23,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.ListView
+import androidx.compose.material.icons.filled.List as ListIcon
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
@@ -171,7 +172,7 @@ private fun onEntryClick(
 ) {
     when {
         state.selection.isNotEmpty() -> onToggleSelect(entry)
-        entry.kind == EntryKind.Directory -> onNavigateTo(entry.path)
+        entry.kind == EntryKind.DIRECTORY -> onNavigateTo(entry.path)
         // Arquivos: abrir com app externo é tratado no nível da Activity
         else -> onNavigateTo(entry.path)
     }
@@ -226,7 +227,7 @@ private fun FileTopBar(
                 Icon(icon, contentDescription = "Arquivos ocultos")
             }
             IconButton(onClick = onToggleGrid) {
-                val icon = if (asGrid) Icons.Filled.ListView else Icons.Filled.GridView
+                val icon = if (asGrid) Icons.Filled.ListIcon else Icons.Filled.GridView
                 Icon(icon, contentDescription = "Alternar grade/lista")
             }
             IconButton(onClick = { sortMenuOpen = true }) {
@@ -248,17 +249,18 @@ private fun FileTopBar(
 }
 
 private fun SortMode.label(): String = when (this) {
-    SortMode.NameAsc -> "Nome (A-Z)"
-    SortMode.NameDesc -> "Nome (Z-A)"
-    SortMode.SizeDesc -> "Tamanho (maior)"
-    SortMode.ModifiedDesc -> "Recentes"
-    SortMode.ModifiedAsc -> "Antigos"
+    SortMode.NAME_ASC -> "Nome (A-Z)"
+    SortMode.NAME_DESC -> "Nome (Z-A)"
+    SortMode.SIZE_DESC -> "Tamanho (maior)"
+    SortMode.MODIFIED_DESC -> "Recentes"
+    SortMode.MODIFIED_ASC -> "Antigos"
 }
 
 // =====================================================================
 // Item de lista
 // =====================================================================
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileListItem(
     entry: FileSystemEntry,
@@ -291,19 +293,21 @@ private fun FileListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (entry.kind == EntryKind.Directory) dateText else "${entry.sizeBytes} B  ·  $dateText",
+                text = if (entry.kind == EntryKind.DIRECTORY) dateText else "${entry.sizeBytes} B  ·  $dateText",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            text = "%o".format(entry.permissionsOctal),
+            // Permissões POSIX em octal (ex.: "755") — UShort precisa converter para formatar
+            text = entry.permissionsOctal.toInt().toString(8),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun GridItem(
     entry: FileSystemEntry,
@@ -347,9 +351,9 @@ private fun GridItem(
 // =====================================================================
 
 private fun FileSystemEntry.icon(): ImageVector = when (kind) {
-    EntryKind.Directory -> Icons.Filled.Folder
-    EntryKind.Symlink -> Icons.Filled.Link
-    EntryKind.File -> when {
+    EntryKind.DIRECTORY -> Icons.Filled.Folder
+    EntryKind.SYMLINK -> Icons.Filled.Link
+    EntryKind.FILE -> when {
         name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") -> Icons.Filled.Image
         name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".ogg") -> Icons.Filled.MusicNote
         name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".rs") || name.endsWith(".kt") -> Icons.Filled.Description

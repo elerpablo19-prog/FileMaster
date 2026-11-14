@@ -47,8 +47,8 @@ class FileSystemRepository(
 
     suspend fun readText(path: String, maxBytes: Long = 1_000_000): String =
         withContext(io) {
-            // List<Byte> (UniFFI Vec<u8>) -> ByteArray
-            engine.readFile(path, maxBytes.toULong()).toByteArray().decodeToString()
+            // ByteArray direto do binding (UniFFI mapeia Vec<u8> -> ByteArray)
+            engine.readFile(path, maxBytes.toULong()).decodeToString()
         }
 
     /**

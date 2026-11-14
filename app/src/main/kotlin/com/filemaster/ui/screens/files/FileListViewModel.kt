@@ -27,7 +27,7 @@ data class FileListUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val showHidden: Boolean = false,
-    val sortMode: SortMode = SortMode.NameAsc,
+    val sortMode: SortMode = SortMode.NAME_ASC,
     val asGrid: Boolean = false,
     // Seleção múltipla
     val selection: Set<String> = emptySet(),
@@ -169,4 +169,4 @@ class FileListViewModel(
 }
 
 /** Helper de UI: ícone por tipo de entrada. */
-fun FileSystemEntry.isDirectory(): Boolean = kind == EntryKind.Directory
+fun FileSystemEntry.isDirectory(): Boolean = kind == EntryKind.DIRECTORY
