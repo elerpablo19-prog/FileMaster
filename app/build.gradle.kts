@@ -106,8 +106,13 @@ fun hostBuild(buildType: String) = tasks.register<Exec>("buildRustHost${buildTyp
 cargoTask("debug")
 cargoTask("release")
 
+// O host build (para gerar bindings a partir do cdylib de host) é registrado
+// fora de qualquer bloco de configuração — o Gradle não permite registrar
+// tasks dentro da realização de outra task.
+val buildRustHostDebug = hostBuild("debug")
+
 tasks.register<Exec>("generateUniFFIBindings") {
-    dependsOn(hostBuild("debug"))
+    dependsOn(buildRustHostDebug)
     val libFile = file("$rootDir/rust/core/target/debug/libfilemaster.so")
     // Usa o uniffi-bindgen embutido na própria crate (src/bin/uniffi-bindgen.rs),
     // garantindo versionamento idêntico entre crate e bindgen — funciona
