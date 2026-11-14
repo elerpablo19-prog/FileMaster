@@ -1,0 +1,15 @@
+# Build artifacts
+.gradle/
+build/
+app/build/
+rust/core/target/
+
+# Bindings e bibliotecas gerados (CI regenera a cada build)
+app/src/main/jniLibs/
+app/src/main/kotlin/com/filemaster/core/
+
+# IDE / sistema
+.idea/
+*.iml
+local.properties
+.DS_Store

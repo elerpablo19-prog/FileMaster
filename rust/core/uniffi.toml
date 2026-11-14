@@ -1,0 +1,7 @@
+# Configuração da geração de bindings UniFFI.
+# Usado por: uniffi-bindgen generate --library ... --config uniffi.toml
+
+[bindings.kotlin]
+package_name = "com.filemaster.core"
+# Bindings geram código que requer coroutines para funções async
+generate_immutable_records = false
