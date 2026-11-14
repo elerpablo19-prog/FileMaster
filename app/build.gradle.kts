@@ -100,6 +100,12 @@ fun hostBuild(buildType: String) = tasks.register<Exec>("buildRustHost${buildTyp
     environment("CARGO_TARGET_DIR", file("$rootDir/rust/core/target").absolutePath)
 }
 
+// Registro efetivo das tasks (a função acima só define; aqui invocamos):
+//   buildRustDebug   -> exigida pelo preBuild (assembleDebug)
+//   buildRustRelease -> exigida pelo assembleRelease
+cargoTask("debug")
+cargoTask("release")
+
 tasks.register<Exec>("generateUniFFIBindings") {
     dependsOn(hostBuild("debug"))
     val libFile = file("$rootDir/rust/core/target/debug/libfilemaster.so")
