@@ -52,12 +52,8 @@ jobs:
           key: cargo-${{ runner.os }}-${{ hashFiles('rust/core/Cargo.lock', 'rust/core/Cargo.toml') }}
           restore-keys: cargo-${{ runner.os }}-
 
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
-
       # ------------------------------------------------------------------
-      # Gradle (usa a versão definida implicitamente pelo AGP; sem wrapper
-      # no repo, o setup-gradle provisiona automaticamente)
+      # Gradle (sem wrapper no repo, o setup-gradle provisiona automaticamente)
       # ------------------------------------------------------------------
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4

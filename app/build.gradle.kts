@@ -78,20 +78,67 @@ kotlin {
 }
 
 // -------------------------------------------------------------------------
-// Tasks Rust
+// Tasks Rust (cargo direto + linkers do NDK — sem depender do cargo-ndk)
+//
+// O cargo-ndk foi removido do pipeline: sua CLI mudou entre versões e é um
+// ponto único de falha. Aqui usamos `cargo build --target <triple>` com os
+// linkers clang do próprio NDK via variáveis de ambiente do Cargo —
+// comportamento idêntico ao cargo-ndk, sem dependência extra.
 // -------------------------------------------------------------------------
 
-fun cargoTask(buildType: String) = tasks.register<Exec>("buildRust${buildType.replaceFirstChar { it.uppercase() }}") {
-    workingDir = rustProjectDir
-    val profile = if (buildType == "release") "--release" else ""
-    commandLine(
-        "cargo", "ndk",
-        "--platform", "31",              // compilado contra API 31 (MANAGE_EXTERNAL_STORAGE era comum)
-        "--output", file("src/main/jniLibs").absolutePath,
-        *cargoTargets.flatMap { listOf("-t", it) }.toTypedArray(),
-        "build", *profile.split(" ").filter { it.isNotBlank() }.toTypedArray()
+/** Mapeamento triple Rust -> ABI do Android (usado também para o jniLibs). */
+val rustTargets = mapOf(
+    "aarch64-linux-android" to "arm64-v8a",
+    "armv7-linux-androideabi" to "armeabi-v7a",
+    "x86_64-linux-android" to "x86_64",
+)
+
+val ndkHome: String = System.getenv("ANDROID_NDK_HOME")
+    ?: System.getenv("NDK_HOME")
+    ?: throw GradleException(
+        "ANDROID_NDK_HOME não definido. Aponte para o NDK (ex.: ~/Android/Sdk/ndk/27.0.12077973)."
     )
-    environment("CARGO_TARGET_DIR", file("$rootDir/rust/core/target").absolutePath)
+
+// A estrutura do NDK difere por SO do host: linux-x86_64 / macosx-x86_64 / windows-x86_64
+val ndkHostTag = when {
+    System.getProperty("os.name").startsWith("Mac") -> "macosx-x86_64"
+    System.getProperty("os.name").startsWith("Windows") -> "windows-x86_64"
+    else -> "linux-x86_64"
+}
+val ndkBin = "$ndkHome/toolchains/llvm/prebuilt/$ndkHostTag/bin"
+
+/** API level usado nos binários do toolchain do NDK (>= minSdk 26). */
+val ANDROID_API_LEVEL = 26
+
+fun buildRustTask(buildType: String) = tasks.register<Exec>("buildRust${buildType.replaceFirstChar { it.uppercase() }}") {
+    workingDir = rustProjectDir
+    // O Cargo resolve os linkers por variáveis de ambiente — sem precisar
+    // de .cargo/config.toml (mantém o projeto independente do caminho do NDK).
+    environment(
+        "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" to "$ndkBin/aarch64-linux-android$ANDROID_API_LEVEL-clang",
+        "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER" to "$ndkBin/armv7a-linux-androideabi$ANDROID_API_LEVEL-clang",
+        "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER" to "$ndkBin/x86_64-linux-android$ANDROID_API_LEVEL-clang",
+        "CARGO_TARGET_DIR", file("$rootDir/rust/core/target").absolutePath,
+    )
+    val profileArgs = if (buildType == "release") "--release" else ""
+    commandLine(
+        "bash", "-c",
+        """
+        set -euo pipefail
+        for triple in ${rustTargets.keys.joinToString(" ")}; do
+          cargo build $profileArgs --target ${'$'}triple
+        done
+        """.trimIndent()
+    )
+    // Copia os .so para o layout jniLibs/<abi>/ esperado pelo AGP
+    doLast {
+        rustTargets.forEach { (triple, abi) ->
+            project.copy {
+                from(file("$rootDir/rust/core/target/$triple/$buildType/libfilemaster.so"))
+                into(file("src/main/jniLibs/$abi"))
+            }
+        }
+    }
 }
 
 fun hostBuild(buildType: String) = tasks.register<Exec>("buildRustHost${buildType.replaceFirstChar { it.uppercase() }}") {
@@ -103,8 +150,8 @@ fun hostBuild(buildType: String) = tasks.register<Exec>("buildRustHost${buildTyp
 // Registro efetivo das tasks (a função acima só define; aqui invocamos):
 //   buildRustDebug   -> exigida pelo preBuild (assembleDebug)
 //   buildRustRelease -> exigida pelo assembleRelease
-cargoTask("debug")
-cargoTask("release")
+buildRustTask("debug")
+buildRustTask("release")
 
 // O host build (para gerar bindings a partir do cdylib de host) é registrado
 // fora de qualquer bloco de configuração — o Gradle não permite registrar
