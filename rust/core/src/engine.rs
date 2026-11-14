@@ -13,7 +13,6 @@ use crate::model::{FileSystemEntry, SortMode, VolumeInfo};
 use crate::ops;
 use crate::ProgressListener;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use tokio::runtime::Runtime;
 
 /// Verifica que o caminho é absoluto e normaliza componentes `.`/`..`.

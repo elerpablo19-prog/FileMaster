@@ -7,7 +7,6 @@ use std::fs;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use walkdir::WalkDir;
 
 use crate::ProgressListener;
@@ -34,7 +33,7 @@ pub fn stat_path(path: &Path) -> FsResult<FileSystemEntry> {
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| "/".into());
     let is_hidden = name.starts_with('.');
-    let permissions = ((md.permissions().mode() & 0o777) as u16);
+    let permissions = (md.permissions().mode() & 0o777) as u16;
     Ok(FileSystemEntry {
         name,
         path: path.display().to_string(),
@@ -74,7 +73,7 @@ pub fn list_dir(dir: &Path, show_hidden: bool, sort: SortMode) -> FsResult<Vec<F
             Ok(md) => md,
             Err(_) => fs::symlink_metadata(&path).map_err(|e| FsError::from_io(&e, &path))?,
         };
-        let permissions = ((md.permissions().mode() & 0o777) as u16);
+        let permissions = (md.permissions().mode() & 0o777) as u16;
         let is_hidden = name.starts_with('.');
         entries.push(FileSystemEntry {
             path: path.display().to_string(),
@@ -168,7 +167,7 @@ pub async fn search(
                 let name = entry.file_name().to_string_lossy();
                 if name.to_lowercase().contains(&needle) {
                     if let Ok(md) = entry.metadata() {
-                        let permissions = ((md.permissions().mode() & 0o777) as u16);
+                        let permissions = (md.permissions().mode() & 0o777) as u16;
                         let is_hidden = name.starts_with('.');
                         hits.push(FileSystemEntry {
                             path: entry.path().display().to_string(),
